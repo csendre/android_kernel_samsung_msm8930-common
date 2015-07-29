@@ -27,7 +27,7 @@
 
 static int enabled;
 static struct msm_thermal_data msm_thermal_info;
-static uint32_t limited_max_freq = MSM_CPUFREQ_NO_LIMIT;
+static uint32_t limited_max_freq_tm = MSM_CPUFREQ_NO_LIMIT;
 static struct delayed_work check_temp_work;
 static bool core_control_enabled;
 static uint32_t cpus_offlined;
@@ -68,7 +68,7 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 	if (ret)
 		return ret;
 
-	limited_max_freq = max_freq;
+	limited_max_freq_tm = max_freq;
 	if (max_freq != MSM_CPUFREQ_NO_LIMIT)
 		pr_info("%s: Limiting cpu%d max frequency to %d\n",
 				KBUILD_MODNAME, cpu, max_freq);
@@ -146,7 +146,7 @@ static void __cpuinit check_temp(struct work_struct *work)
 	static int limit_init;
 	struct tsens_device tsens_dev;
 	long temp = 0;
-	uint32_t max_freq = limited_max_freq;
+	uint32_t max_freq = limited_max_freq_tm;
 	int cpu = 0;
 	int ret = 0;
 
@@ -188,7 +188,7 @@ static void __cpuinit check_temp(struct work_struct *work)
 		} else
 			max_freq = table[limit_idx].frequency;
 	}
-	if (max_freq == limited_max_freq)
+	if (max_freq == limited_max_freq_tm)
 		goto reschedule;
 
 	/* Update new limits */
@@ -242,7 +242,7 @@ static void __cpuinit disable_msm_thermal(void)
 	/* make sure check_temp is no longer running */
 	cancel_delayed_work_sync(&check_temp_work);
 
-	if (limited_max_freq == MSM_CPUFREQ_NO_LIMIT)
+	if (limited_max_freq_tm == MSM_CPUFREQ_NO_LIMIT)
 		return;
 
 	for_each_possible_cpu(cpu) {
