@@ -1448,22 +1448,14 @@ int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 }
 EXPORT_SYMBOL_GPL(zap_vma_ptes);
 
-static inline bool can_follow_write_pte(pte_t pte, struct page *page,
-					unsigned int flags)
+/*
+ * FOLL_FORCE can write to even unwritable pte's, but only
+ * after we've gone through a COW cycle and they are dirty.
+ */
+static inline bool can_follow_write_pte(pte_t pte, unsigned int flags)
 {
-	if (pte_write(pte))
-		return true;
-
-	/*
-	 * Make sure that we are really following CoWed page. We do not really
-	 * have to care about exclusiveness of the page because we only want
-	 * to ensure that once COWed page hasn't disappeared in the meantime
-	 * or it hasn't been merged to a KSM page.
-	 */
-	if ((flags & FOLL_FORCE) && (flags & FOLL_COW))
-		return page && PageAnon(page) && !PageKsm(page);
-
-	return false;
+	return pte_write(pte) ||
+		((flags & FOLL_FORCE) && (flags & FOLL_COW) && pte_dirty(pte));
 }
 
 /**
@@ -1548,6 +1540,9 @@ split_fallthrough:
 	pte = *ptep;
 	if (!pte_present(pte))
 		goto no_page;
+
+	if ((flags & FOLL_WRITE) && !can_follow_write_pte(pte, flags))
+		goto unlock;
 
 	page = vm_normal_page(vma, address, pte);
 	if ((flags & FOLL_WRITE) && !can_follow_write_pte(pte, page, flags)) {
