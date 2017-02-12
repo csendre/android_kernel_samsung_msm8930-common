@@ -373,7 +373,6 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
-		   -Wno-sizeof-pointer-memaccess \
 		   -std=gnu89
 
 KBUILD_AFLAGS_KERNEL :=
